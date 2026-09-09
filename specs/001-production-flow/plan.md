@@ -1,188 +1,230 @@
 # Implementation Plan: Production Flow
 
-**Feature**: Production Flow
-**Status**: Draft
-**Created**: 2026-09-09
+**Branch**: `001-production-flow` | **Date**: 2026-09-09 | **Spec**: [spec.md](spec.md)
 
-## Objetivo
+**Status**: Ready
 
-Implementar um MVP web responsivo de gestão de produção audiovisual com foco em centralização da informação, acompanhamento de objetivos por área, supervisão, colaboração em tempo real e organização visual aderente ao Design System GOV.BR (DSGOV).
+## Summary
 
-## Arquitetura proposta
+Implementar um MVP web responsivo para centralizar a pré-produção audiovisual em um quadro Kanban por área, com abas de Objetivos e Resumo, autorização por papel e área, criação de objetivos por Diretor/AD, colaboração em objetivos compartilhados, documentos, comentários, histórico, auto-save e sincronização em tempo real. O protótipo em `prototipo/` é a referência de interação; arrays locais, troca manual de usuário, CDN e IDs gerados no navegador não fazem parte da arquitetura de produção.
 
-### Stack
+## Technical Context
 
-- Frontend web responsivo: React
-- Mobile nativo: fora do MVP; evolução futura com React Native
-- Backend/API: Node.js + TypeScript + Express ou Next.js API routes
-- Banco de dados: PostgreSQL
-- Autenticação do MVP: Google SSO
-- Sincronização em tempo real: WebSockets ou Supabase realtime
-- Persistência local mobile: fora do MVP
-- Estado global: React Query + Zustand ou Redux Toolkit
-- UX/UI: Design System GOV.BR com componentes, fundamentos visuais, tokens oficiais, acessibilidade e padrões de interação DSGOV
+**Language/Version**: TypeScript 5.x, Node.js 22 LTS, React 19  
+**Primary Dependencies**: React, Vite, TanStack Query, Zustand, `@govbr-ds/core`, Fastify, Prisma, Socket.IO, Zod  
+**Storage**: PostgreSQL 16; arquivos externos representados por metadados e URL no MVP  
+**Authentication**: Google OAuth 2.0/OIDC, sessão em cookie `HttpOnly`, `Secure` e `SameSite=Lax`  
+**Testing**: Vitest, React Testing Library, testes de integração da API, Playwright e `@axe-core/playwright`  
+**Target Platform**: Navegadores evergreen em desktop, tablet e mobile  
+**Project Type**: Aplicação web com frontend e API separados em monorepo  
+**Performance Goals**: dashboard interativo em até 2 s após sessão validada; mutações comuns confirmadas em até 500 ms p95 na rede de referência; eventos em tempo real percebidos em até 1 s  
+**Constraints**: WCAG AA/eMAG aplicável, DSGOV como base visual, autorização sempre no servidor, sem escrita offline, somente três status no MVP  
+**Scale/Scope**: múltiplas produções, dezenas de áreas e centenas de objetivos por produção; paginação e agregação executadas no backend
 
-### Estrutura de pastas
+## Constitution Check
+
+*GATE: aprovado antes do design e reavaliado após as decisões abaixo.*
+
+- **Centralização**: PostgreSQL e API são a fonte oficial de objetivos, decisões, responsáveis, documentos e progresso.
+- **Papéis e permissões**: autorização é avaliada no backend; esconder controles na UI não concede segurança.
+- **Checklist e progresso**: objetivo usa apenas `pending`, `in_progress` e `complete`; progresso existe somente como agregado de concluídos sobre total.
+- **Contexto e colaboração**: detalhe mantém resumo, visão do diretor, responsável, documentos, comentários e histórico próximos ao objetivo.
+- **Experiência e DSGOV**: componentes, tokens, foco, contraste e semântica seguem DSGOV; a composição Kanban é a experiência operacional aprovada e não usa a wordmark gov.br.
+- **Escopo MVP**: React Native, Apple ID, push notifications, exclusão/reabertura e resolução avançada de conflitos permanecem fora do MVP.
+
+Não há violações constitucionais que exijam justificativa de complexidade.
+
+## Project Structure
+
+### Documentation
 
 ```text
-production-flow/
-├── apps/
-│   ├── web/
-│   └── mobile/            # futuro, fora do MVP
-├── packages/
-│   ├── ui/
-│   ├── shared/
-│   └── types/
-├── services/
-│   └── api/
-├── prisma/
-│   └── schema.prisma
-├── docs/
-└── README.md
+specs/001-production-flow/
+├── spec.md
+├── plan.md
+├── sdd-ears.md
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
+│   ├── openapi.yaml
+│   └── realtime-events.md
+└── tasks.md
 ```
 
-## Requisitos principais
+### Source Code
 
-### 1. Autenticação e perfil
+```text
+apps/
+└── web/
+    ├── src/
+    │   ├── app/
+    │   ├── features/auth/
+    │   ├── features/dashboard/
+    │   ├── features/objectives/
+    │   ├── features/profile/
+    │   ├── features/summary/
+    │   ├── lib/
+    │   └── styles/
+    └── tests/
 
-- Login com Google SSO no web responsivo
-- Apple ID e app mobile nativo fora do MVP
-- Cadastro de nome e papel
-- Associação de áreas de atuação
-- Exibição de contexto relevante por papel
+services/
+└── api/
+    ├── src/
+    │   ├── modules/auth/
+    │   ├── modules/areas/
+    │   ├── modules/objectives/
+    │   ├── modules/comments/
+    │   ├── modules/documents/
+    │   ├── modules/history/
+    │   ├── modules/realtime/
+    │   └── plugins/
+    └── tests/
 
-### 2. Painel principal e centralização
+packages/
+├── ui/
+├── types/
+└── shared/
 
-- Dashboard com visão geral da produção
-- Organização por área, etapa, cena e cronograma
-- Resumo de objetivos e pendências
-- Acesso rápido aos itens em execução e concluídos
+prisma/
+├── schema.prisma
+├── migrations/
+└── seed.ts
+```
 
-### 3. Checklists por área
+**Structure Decision**: pnpm workspaces com frontend, API e pacotes compartilhados. React Native não recebe pasta no MVP para evitar estrutura ociosa; tipos e regras independentes de plataforma ficam em `packages/`.
 
-- Estado: pendente, em andamento e concluído
-- Indicadores visuais de responsável, usuários ativos e progresso
-- Ícones para pessoas trabalhando no item
-- Atualização do percentual da área por objetivos concluídos sobre total de objetivos da área
+## Architecture
 
-### 4. Objetivos e contexto
+### Frontend
 
-- Cada objetivo é uma tarefa simples com resumo, próximos passos e contexto do diretor
-- Links e documentos anexados por objetivo
-- Comentários, sugestões e histórico
-- Documentos e links acessíveis sempre que o objetivo estiver visível para o usuário
+- React Router organiza autenticação, onboarding e dashboard.
+- TanStack Query mantém estado remoto, invalidação e mutações otimistas controladas.
+- Zustand fica restrito a estado efêmero de interface e presença; dados persistentes não são duplicados nele.
+- `@govbr-ds/core` é instalado via npm. Componentes React finos encapsulam marcação e tokens DSGOV usados pelo produto.
+- O dashboard possui abas acessíveis `Objetivos` e `Resumo`; Objetivos é a aba inicial.
+- Objetivos usa Kanban horizontal com uma coluna persistente por área. Colunas sem dados autorizados mostram contagem zero, progresso 0% e estado vazio.
+- Cards exibem título, cena e etapa quando informadas, responsável, prazo, status textual/visual e selo de compartilhamento quando aplicável; não exibem percentual individual.
+- Filtros de cena e etapa são aplicados no backend sobre a consulta autorizada, sem alterar as colunas de área do Kanban.
+- O detalhe e a criação usam modais com `aria-modal`, foco inicial, fechamento por Escape e retorno ao acionador.
 
-### 5. Supervisão
+### API and Authorization
 
-- Visão do diretor e assistente de direção
-- Progresso por área
-- Acesso a materiais de todos os objetivos visíveis para supervisão
-- Acompanhamento de riscos e pendências
+- Fastify expõe contratos REST validados por Zod e tipos compartilhados.
+- Toda consulta recebe `productionId` do contexto autorizado, nunca apenas do cliente.
+- Política de leitura de objetivo:
+  - Diretor/AD da produção: todos os objetivos;
+  - membro: objetivo cuja área principal pertence ao usuário ou que foi compartilhado com uma de suas áreas.
+- Política de escrita estrutural: somente Diretor/AD cria ou altera título, área, cena, etapa, responsável, prazo, resumo, visão do diretor e compartilhamentos.
+- Política de escrita operacional: Diretor/AD e membros autorizados podem alterar status, comentar e manter documentos/links.
+- Exclusão de objetivo e edição/exclusão de comentário não são expostas no MVP.
+- Endpoints respondem `401` para sessão inválida, `403` para autorização negada, `409` para conflito de versão e `422` para dados inválidos.
 
-### 6. Colaboração em tempo real
+### Data and Progress
 
-- Auto-save
-- Sincronização de status e comentários em fluxo compartilhado
-- Responsáveis visíveis em item em andamento
-- Last write wins para edições simultâneas no MVP
-- Comentários e atualização centralizada, com histórico auditável
+- `Objective` referencia uma área principal e um usuário responsável elegível na produção; `sceneReference` e `stageReference` são textos opcionais normalizados para busca, e `dueDate` representa sua referência de cronograma.
+- `ObjectiveSharedArea` representa compartilhamento N:N com áreas secundárias e impede duplicidade com a área principal.
+- O status inicial é `pending`; transições aceitas permanecem entre os três estados do MVP.
+- Não existe coluna de percentual no objetivo.
+- Progresso de área e produção é calculado por `COUNT(complete) / COUNT(total)` no escopo autorizado; conjunto vazio retorna 0%.
+- Toda mutação relevante cria `HistoryEntry` na mesma transação do dado alterado.
+- Last write wins usa `updatedAt`/versão recebida pelo cliente; a última gravação aceita torna-se atual sem apagar o histórico.
 
-## Design system GOV.BR
+### Realtime and Failure Handling
 
-### Diretrizes obrigatórias
+- Socket.IO autentica a mesma sessão da API e usa salas por produção e objetivo.
+- Eventos mínimos: `objective.status_changed`, `objective.comment_added`, `objective.document_changed`, `objective.presence_changed` e `sync.error`.
+- Presença é efêmera e não substitui o responsável designado.
+- A perda de conexão exibe estado offline; alterações offline não são enfileiradas no MVP.
+- Falha de sincronização mantém dados confirmados no servidor e oferece recarregar ou tentar novamente.
 
-- O MVP deve usar DSGOV como fonte primária de componentes, fundamentos visuais, tokens oficiais e padrões de interação.
-- Customizações visuais não devem substituir padrões oficiais quando houver componente ou token DSGOV equivalente.
-- A interface deve cumprir acessibilidade aplicável: operação por teclado, foco visível, nomes acessíveis, progresso anunciado para tecnologias assistivas, status não dependente apenas de cor e contraste WCAG AA/eMAG quando aplicável.
-- O fluxo de desenvolvimento deve priorizar `@govbr-ds/core` via npm em implementação real; CDN é aceitável apenas para protótipo estático.
+## Interfaces
 
-### Componentes-chave
+### REST
 
-- Navegação por área em padrão DSGOV, preferencialmente horizontal ou responsiva conforme densidade da tela
-- Cards de objetivos com status visual
-- Checklist horizontal/vertical
-- Modal de detalhe do objetivo
-- Badges de responsável e progresso
-- Tabela ou painel resumido por departamento
+- `GET /me` e `PUT /me/profile`
+- `GET /productions/:productionId/areas`
+- `GET /productions/:productionId/objectives` — aceita filtros opcionais `scene` e `stage` dentro do escopo autorizado
+- `POST /productions/:productionId/objectives` — Diretor/AD
+- `GET /objectives/:objectiveId`
+- `PATCH /objectives/:objectiveId` — campos estruturais, Diretor/AD
+- `PATCH /objectives/:objectiveId/status` — usuário autorizado
+- `POST /objectives/:objectiveId/comments`
+- `GET /objectives/:objectiveId/history`
+- `POST|PATCH|DELETE /objectives/:objectiveId/documents`
+- `GET /productions/:productionId/summary` — resposta agregada conforme escopo do usuário
 
-## Fluxo de usuário
+### UI Contracts
 
-1. Usuário faz login
-2. Seleciona papel/áreas
-3. Acessa dashboard principal
-4. Navega entre objetivos por área
-5. Abre item e consulta contexto, links, comentários e responsáveis
-6. Atualiza status para em andamento ou concluído
-7. O progresso da área e da produção é recalculado automaticamente
-8. Diretoria acompanha visão de supervisão e intervenções necessárias
-9. O sistema preserva as mesmas regras funcionais em desktop, tablet e navegador mobile
+- **Objetivos**: aba default, colunas de área, cards autorizados, empty states e criação supervisor-only.
+- **Resumo**: cards numéricos, resumo por área e supervisão; agregados globais apenas para Diretor/AD.
+- **Objetivo compartilhado**: permanece na coluna da área principal e recebe texto `Compartilhado com sua área` para membros da área secundária.
+- **Novo objetivo**: título, área principal, responsável, prazo, resumo e visão do diretor obrigatórios; cena, etapa e áreas compartilhadas opcionais, sem repetir a área principal.
 
-## Critérios de aceitação de arquitetura
+## Implementation Phases
 
-- A experiência em desktop, tablet e navegador mobile preserva lógica e fluxo
-- O backend mantém uma única fonte de verdade para objetos de produção
-- As permissões são tratadas no backend e refletidas na UI
-- O auto-save, last write wins e a sincronização em tempo real são avaliados como requisitos do MVP
-- O design prioriza aderência DSGOV, legibilidade, clareza e produtividade da equipe de produção
+### Phase 1 — Foundation
 
-## Riscos e mitigação
+- Criar monorepo pnpm, configurações TypeScript, lint, testes e variáveis de ambiente.
+- Configurar PostgreSQL, Prisma, migrações e seed de papéis/áreas.
+- Integrar Google OAuth e sessão segura.
 
-### Risco: sobreposição de papéis e permissões
-Mitigação: definir autorização por papel e nível de acesso e validar regras no backend.
+### Phase 2 — Identity and Authorization
 
-### Risco: excesso de informação na interface
-Mitigação: priorizar visão por área e contexto do item em vez de painel genérico.
+- Implementar onboarding de perfil, papéis e áreas.
+- Implementar políticas centralizadas de leitura, escrita estrutural e escrita operacional.
+- Cobrir acessos negados com testes de API antes de construir a UI protegida.
 
-### Risco: conflito de edição simultânea
-Mitigação: usar last write wins no MVP, histórico de alterações e sincronização por evento com indicadores de usuário ativo.
+### Phase 3 — Objectives and Dashboard
 
-### Risco: baixa adoção por equipe de produção
-Mitigação: manter interface simples, aderente ao DSGOV e com objetivos claros por área.
+- Implementar modelo, consultas autorizadas, criação e atualização de status.
+- Construir shell DSGOV, abas, Kanban, cards, empty states e modais.
+- Implementar Resumo com agregados escopados no servidor.
 
-### Risco: desalinhamento com acessibilidade e DSGOV
-Mitigação: validar componentes com critérios DSGOV, operação por teclado, nomes acessíveis, foco visível, contraste e responsividade.
+### Phase 4 — Context and Collaboration
 
-## Plano de implementação por fases
+- Implementar documentos/links, comentários append-only e histórico.
+- Adicionar auto-save para campos permitidos e tratamento de conflitos.
+- Implementar Socket.IO para status, comentários e presença.
 
-### Fase 1 - Base e autenticação
+### Phase 5 — Quality and Release
 
-- Estrutura do monorepo
-- Configuração do backend e banco
-- Auth por Google SSO
-- Modelos iniciais de usuário, papel e área
+- Validar acessibilidade, responsividade, segurança, concorrência e falhas de rede.
+- Executar cenários E2E por papel e preparar evidências do MVP.
 
-### Fase 2 - Dashboard e objetivos
+## Testing Strategy
 
-- Criação de dashboard principal
-- Checklist por área
-- Detalhes do objetivo
-- Definição de status e responsável
+- **Unit**: cálculo de progresso, validações, políticas de autorização e transições de status.
+- **Integration**: API + PostgreSQL para criação, compartilhamento, histórico, agregados e negativas 401/403/409/422.
+- **Component**: tabs, cards, empty states, formulários e modais com foco.
+- **E2E**: Diretor/AD cria e supervisiona; membro vê próprias áreas e compartilhamentos; membro não cria nem edita campos estruturais.
+- **Accessibility**: teclado, foco visível, nomes acessíveis, status por texto e visual, `progressbar` semântico e contraste.
+- **Responsive**: desktop, tablet e mobile, com scroll horizontal intencional no Kanban.
 
-### Fase 3 - Colaboração e supervisão
+## Risks and Mitigations
 
-- Comentários
-- Visão de supervisão
-- Acesso a documentos conforme visibilidade do objetivo
-- Indicadores de progresso geral
+- **Vazamento por agregados**: summary é calculado no backend no mesmo escopo das consultas de objetivos.
+- **Autorização apenas visual**: middleware e políticas de domínio validam todas as mutações e leituras.
+- **Duplicidade multiárea**: consultas usam IDs únicos; compartilhamentos possuem restrição composta.
+- **Conflito simultâneo**: versão/`updatedAt`, last write wins e histórico transacional.
+- **DSGOV parecer portal institucional**: usar fundamentos e componentes sem wordmark; manter composição densa de ferramenta operacional.
+- **Kanban em telas pequenas**: colunas com largura estável e rolagem horizontal acessível, sem comprimir cards.
 
-### Fase 4 - Ajustes de UX e sincronização
+## Prototype Boundary
 
-- Auto-save
-- Sincronização em tempo real
-- Conformidade DSGOV
-- Testes de acessibilidade, usabilidade, responsividade e regressão
+Os seguintes elementos são apenas mecanismos da demonstração e devem ser substituídos: usuários/áreas/objetivos hardcoded, troca de usuário por `select`, React via CDN, dados em memória, IDs por `Date.now()`, links `#`, responsável em texto livre e ausência de autorização no servidor. O protótipo permanece referência para hierarquia, tabs, Kanban, cards, estados vazios, modais e feedback visual.
 
-## Critérios de pronto do MVP
+## Definition of Done
 
-- Login funcional com SSO
-- Perfil com papel e áreas
-- Checklist por área com progresso calculado por objetivos concluídos
-- Objetivo com contexto e documentos
-- Comentários e colaboração
-- Visão de supervisão para liderança
-- Fluxo consistente em desktop, tablet e navegador mobile
-- Interface aderente ao DSGOV e acessível por teclado
+- Google SSO e perfil obrigatório funcionam.
+- Autorização no backend cobre leitura, criação, escrita estrutural e operacional.
+- Objetivos e Resumo respeitam escopo global ou de membro sem vazamento.
+- Diretor/AD cria objetivo válido para qualquer área; membro recebe `403`.
+- Kanban, cards, compartilhamentos, modais e estados vazios seguem a decisão de UX.
+- Progresso agregado é correto e não existe percentual individual por objetivo.
+- Documentos, comentários, histórico, auto-save e realtime funcionam conforme EARS.
+- Testes automatizados, acessibilidade e responsividade passam nos cenários definidos.
 
-## Observações
+## Complexity Tracking
 
-Este plano serve como base para o desenvolvimento do MVP e deve ser refinado em tarefas específicas após a revisão do escopo e da arquitetura final.
+Nenhuma violação constitucional identificada.
