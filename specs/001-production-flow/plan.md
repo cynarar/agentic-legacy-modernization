@@ -6,21 +6,21 @@
 
 ## Objetivo
 
-Implementar um MVP web/mobile de gestão de produção audiovisual com foco em centralização da informação, acompanhamento de objetivos por área, supervisão, colaboração em tempo real e organização visual limpa.
+Implementar um MVP web responsivo de gestão de produção audiovisual com foco em centralização da informação, acompanhamento de objetivos por área, supervisão, colaboração em tempo real e organização visual aderente ao Design System GOV.BR (DSGOV).
 
 ## Arquitetura proposta
 
 ### Stack
 
-- Frontend web: React
-- Mobile: React Native
+- Frontend web responsivo: React
+- Mobile nativo: fora do MVP; evolução futura com React Native
 - Backend/API: Node.js + TypeScript + Express ou Next.js API routes
 - Banco de dados: PostgreSQL
-- Autenticação: SSO com Google e Apple ID
+- Autenticação do MVP: Google SSO
 - Sincronização em tempo real: WebSockets ou Supabase realtime
-- Persistência local mobile: AsyncStorage ou equivalente
+- Persistência local mobile: fora do MVP
 - Estado global: React Query + Zustand ou Redux Toolkit
-- UX/UI: design system com tokens de cor pastéis e componentes reutilizáveis
+- UX/UI: Design System GOV.BR com componentes, fundamentos visuais, tokens oficiais, acessibilidade e padrões de interação DSGOV
 
 ### Estrutura de pastas
 
@@ -28,7 +28,7 @@ Implementar um MVP web/mobile de gestão de produção audiovisual com foco em c
 production-flow/
 ├── apps/
 │   ├── web/
-│   └── mobile/
+│   └── mobile/            # futuro, fora do MVP
 ├── packages/
 │   ├── ui/
 │   ├── shared/
@@ -45,8 +45,8 @@ production-flow/
 
 ### 1. Autenticação e perfil
 
-- Login com SSO do Google no web
-- Login com Google ou Apple no mobile
+- Login com Google SSO no web responsivo
+- Apple ID e app mobile nativo fora do MVP
 - Cadastro de nome e papel
 - Associação de áreas de atuação
 - Exibição de contexto relevante por papel
@@ -61,43 +61,44 @@ production-flow/
 ### 3. Checklists por área
 
 - Estado: pendente, em andamento e concluído
-- Indicadores visuais de responsável e progresso
+- Indicadores visuais de responsável, usuários ativos e progresso
 - Ícones para pessoas trabalhando no item
-- Atualização do percentual da área
+- Atualização do percentual da área por objetivos concluídos sobre total de objetivos da área
 
 ### 4. Objetivos e contexto
 
-- Cada item possui resumo, objetivos e contexto do diretor
+- Cada objetivo é uma tarefa simples com resumo, próximos passos e contexto do diretor
 - Links e documentos anexados por objetivo
 - Comentários, sugestões e histórico
-- Liberação de documentos conforme status e permissão
+- Documentos e links acessíveis sempre que o objetivo estiver visível para o usuário
 
 ### 5. Supervisão
 
 - Visão do diretor e assistente de direção
 - Progresso por área
-- Acesso supervisionado a materiais quando concluídos
+- Acesso a materiais de todos os objetivos visíveis para supervisão
 - Acompanhamento de riscos e pendências
 
 ### 6. Colaboração em tempo real
 
 - Auto-save
-- Sincronização de alterações em fluxo compartilhado
+- Sincronização de status e comentários em fluxo compartilhado
 - Responsáveis visíveis em item em andamento
-- Comentários e atualização centralizada
+- Last write wins para edições simultâneas no MVP
+- Comentários e atualização centralizada, com histórico auditável
 
-## Design system
+## Design system GOV.BR
 
-### Paleta recomendada
+### Diretrizes obrigatórias
 
-- Branco principal
-- Tons pastéis: azul suave, lilás suave, rosa claro, verde menta, amarelo pêssego
-- Contraste moderado para legibilidade
-- Acentos discretos para estados de progresso
+- O MVP deve usar DSGOV como fonte primária de componentes, fundamentos visuais, tokens oficiais e padrões de interação.
+- Customizações visuais não devem substituir padrões oficiais quando houver componente ou token DSGOV equivalente.
+- A interface deve cumprir acessibilidade aplicável: operação por teclado, foco visível, nomes acessíveis, progresso anunciado para tecnologias assistivas, status não dependente apenas de cor e contraste WCAG AA/eMAG quando aplicável.
+- O fluxo de desenvolvimento deve priorizar `@govbr-ds/core` via npm em implementação real; CDN é aceitável apenas para protótipo estático.
 
 ### Componentes-chave
 
-- Sidebar de navegação por área
+- Navegação por área em padrão DSGOV, preferencialmente horizontal ou responsiva conforme densidade da tela
 - Cards de objetivos com status visual
 - Checklist horizontal/vertical
 - Modal de detalhe do objetivo
@@ -114,14 +115,15 @@ production-flow/
 6. Atualiza status para em andamento ou concluído
 7. O progresso da área e da produção é recalculado automaticamente
 8. Diretoria acompanha visão de supervisão e intervenções necessárias
+9. O sistema preserva as mesmas regras funcionais em desktop, tablet e navegador mobile
 
 ## Critérios de aceitação de arquitetura
 
-- A experiência da web e mobile são consistentes em lógica e fluxo
+- A experiência em desktop, tablet e navegador mobile preserva lógica e fluxo
 - O backend mantém uma única fonte de verdade para objetos de produção
 - As permissões são tratadas no backend e refletidas na UI
-- O auto-save e a sincronização em tempo real são avaliados como requisitos do MVP
-- O design prioriza legibilidade, clareza e produtividade da equipe de produção
+- O auto-save, last write wins e a sincronização em tempo real são avaliados como requisitos do MVP
+- O design prioriza aderência DSGOV, legibilidade, clareza e produtividade da equipe de produção
 
 ## Riscos e mitigação
 
@@ -132,10 +134,13 @@ Mitigação: definir autorização por papel e nível de acesso e validar regras
 Mitigação: priorizar visão por área e contexto do item em vez de painel genérico.
 
 ### Risco: conflito de edição simultânea
-Mitigação: usar revisão de concorrência e sincronização por evento com indicadores de responsável.
+Mitigação: usar last write wins no MVP, histórico de alterações e sincronização por evento com indicadores de usuário ativo.
 
 ### Risco: baixa adoção por equipe de produção
-Mitigação: manter interface simples, visual minimalista e objetivos claros por área.
+Mitigação: manter interface simples, aderente ao DSGOV e com objetivos claros por área.
+
+### Risco: desalinhamento com acessibilidade e DSGOV
+Mitigação: validar componentes com critérios DSGOV, operação por teclado, nomes acessíveis, foco visível, contraste e responsividade.
 
 ## Plano de implementação por fases
 
@@ -143,7 +148,7 @@ Mitigação: manter interface simples, visual minimalista e objetivos claros por
 
 - Estrutura do monorepo
 - Configuração do backend e banco
-- Auth por SSO
+- Auth por Google SSO
 - Modelos iniciais de usuário, papel e área
 
 ### Fase 2 - Dashboard e objetivos
@@ -157,25 +162,26 @@ Mitigação: manter interface simples, visual minimalista e objetivos claros por
 
 - Comentários
 - Visão de supervisão
-- Restrição de documentos por permissão
+- Acesso a documentos conforme visibilidade do objetivo
 - Indicadores de progresso geral
 
 ### Fase 4 - Ajustes de UX e sincronização
 
 - Auto-save
 - Sincronização em tempo real
-- Refinamento visual
-- Testes de usabilidade e regressão
+- Conformidade DSGOV
+- Testes de acessibilidade, usabilidade, responsividade e regressão
 
 ## Critérios de pronto do MVP
 
 - Login funcional com SSO
 - Perfil com papel e áreas
-- Checklist por área com progresso real
+- Checklist por área com progresso calculado por objetivos concluídos
 - Objetivo com contexto e documentos
 - Comentários e colaboração
 - Visão de supervisão para liderança
-- Fluxo consistente em web e mobile
+- Fluxo consistente em desktop, tablet e navegador mobile
+- Interface aderente ao DSGOV e acessível por teclado
 
 ## Observações
 

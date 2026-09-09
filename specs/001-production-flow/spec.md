@@ -61,12 +61,12 @@ Como diretor ou assistente de direção, quero acessar uma visão de supervisão
 
 **Why this priority**: O acompanhamento do estado geral do projeto é central para a liderança e para a coordenação da produção.
 
-**Independent Test**: Pode ser validado em uma visão de supervisão que apresente progresso geral, itens por área e documentos liberados somente quando concluídos.
+**Independent Test**: Pode ser validado em uma visão de supervisão que apresente progresso geral, itens por área e documentos acessíveis para objetivos visíveis ao usuário.
 
 **Acceptance Scenarios**:
 
 1. **Given** que o usuário possui papel de supervisão, **When** ele acessa o painel de acompanhamento, **Then** ele visualiza os checklists de todas as áreas e o percentual de progresso por departamento.
-2. **Given** que uma área marcou um item como concluído, **When** o supervisor abre o conteúdo, **Then** ele consegue acessar o documento ou material de apoio correspondente.
+2. **Given** que um objetivo está visível para o supervisor, **When** o supervisor abre o conteúdo, **Then** ele consegue acessar o documento ou material de apoio correspondente independentemente do status do objetivo.
 
 ---
 
@@ -80,7 +80,7 @@ Como usuário do sistema, quero me autenticar com SSO, preencher meu perfil e re
 
 **Acceptance Scenarios**:
 
-1. **Given** que o usuário entra no app, **When** faz login com Gmail ou Apple, **Then** o sistema cria a sessão e identifica o papel principal do perfil.
+1. **Given** que o usuário entra no MVP web responsivo, **When** faz login com Google SSO, **Then** o sistema cria a sessão e identifica o papel principal do perfil.
 2. **Given** que o usuário possui mais de um papel, **When** ele entra no sistema, **Then** o app mostra os checklists associados aos papéis relevantes sem poluir a experiência.
 
 ---
@@ -102,49 +102,52 @@ Como membro da equipe, quero anexar links e documentos de referência ao objetiv
 
 ### Edge Cases
 
-- O que acontece quando um usuário tem mais de um papel e os objetivos dos papéis se sobrepõem?
-- Como o sistema trata um objetivo compartilhado por duas áreas que atualizam o mesmo item ao mesmo tempo?
-- O que acontece quando um membro tenta acessar um documento que ainda não foi liberado pela área responsável?
-- Como o sistema lida com links quebrados, arquivos ausentes ou contexto incompleto em um objetivo?
-- O que acontece quando uma tarefa está em andamento por mais de uma pessoa simultaneamente?
-- Como a equipe registra uma decisão que altera um objetivo já concluído?
+- O que acontece quando um usuário tem mais de um papel e os objetivos dos papéis se sobrepõem? O MVP deve exibir a união dos objetivos visíveis sem duplicidade.
+- Como o sistema trata um objetivo compartilhado por duas áreas que atualizam o mesmo item ao mesmo tempo? O MVP deve usar last write wins, sincronização em tempo real e histórico de alterações.
+- O que acontece quando um membro tenta acessar um objetivo não pertencente à sua área e não compartilhado explicitamente com ele? O MVP deve negar o acesso.
+- Como o sistema lida com links quebrados, arquivos ausentes ou contexto incompleto em um objetivo? O MVP deve exibir mensagem amigável sem perder dados já salvos.
+- O que acontece quando uma tarefa está em andamento por mais de uma pessoa simultaneamente? O MVP deve exibir indicadores de usuários ativos no objetivo.
+- Como a equipe registra uma decisão que altera um objetivo já concluído? O MVP deve registrar a alteração no histórico; estados de reabertura ficam fora do MVP.
 
 ## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: O sistema MUST centralizar a visão da produção em um painel principal com objetivos, etapas, áreas, responsáveis e estado de progresso.
+- **FR-001**: O sistema MUST centralizar a visão da produção em um painel principal com objetivos, áreas, responsáveis e estado de progresso.
 - **FR-002**: O sistema MUST permitir organização por área, cena, etapa e cronograma para que a produção tenha contexto completo por unidade de trabalho.
-- **FR-003**: O sistema MUST oferecer checklists por área com status de pendente, em andamento e concluído.
+- **FR-003**: O sistema MUST oferecer checklists por área com objetivos em apenas três status no MVP: pendente, em andamento e concluído.
 - **FR-004**: O sistema MUST permitir que cada objetivo registre resumo, visão do diretor, links, documentos, comentários e responsáveis.
 - **FR-005**: O sistema MUST indicar quem está trabalhando em um item em andamento e mostrar esse contexto ao restante da equipe.
-- **FR-006**: O sistema MUST atualizar a visibilidade de progresso da área quando uma tarefa é marcada como concluída.
-- **FR-007**: O sistema MUST permitir colaboração entre áreas em objetivos compartilhados sem perder o contexto original do item.
+- **FR-006**: O sistema MUST calcular o progresso da área como o percentual de objetivos concluídos sobre o total de objetivos daquela área.
+- **FR-007**: O sistema MUST permitir colaboração em objetivos explicitamente compartilhados com usuários autorizados sem perder o contexto original do item.
 - **FR-008**: O sistema MUST diferenciar os papéis de diretor, assistente de direção e demais áreas, adaptando a experiência conforme responsabilidades e permissões.
 - **FR-009**: O sistema MUST fornecer visão de supervisão para diretor e assistente de direção com progresso geral por área.
-- **FR-010**: O sistema MUST restringir a visualização de documentos somente ao conjunto de acessos permitido por papel e pelo status de conclusão do item.
-- **FR-011**: O sistema MUST suportar login via SSO com Google no web e Google ou Apple no mobile.
+- **FR-010**: O sistema MUST exibir documentos e links de um objetivo sempre que o objetivo estiver visível para o usuário, independentemente do status do objetivo.
+- **FR-011**: O MVP MUST suportar login via Google SSO no web responsivo; Apple ID e app mobile nativo ficam fora do MVP.
 - **FR-012**: O sistema MUST permitir que o usuário cadastre nome, papel e áreas de atuação em seu perfil.
-- **FR-013**: O sistema MUST permitir o auto-save contínuo e sincronização em tempo real de alterações em um mesmo objetivo.
+- **FR-013**: O sistema MUST permitir auto-save para campos permitidos, documentos, links e comentários, usando last write wins em edições simultâneas no MVP.
 - **FR-014**: O sistema MUST possibilitar anexar links e materiais de apoio diretamente ao contexto da tarefa.
-- **FR-015**: O sistema MUST manter o histórico de comentários e alterações relevantes para manter a transparência da decisão e evitar retrabalho.
-- **FR-016**: O sistema MUST usar uma interface limpa, visualmente organizada, com paleta clara e tons pastel para melhorar legibilidade e experiência do usuário.
-- **FR-017**: O sistema MUST funcionar de forma consistente em web e mobile, preservando a lógica de navegação e a organização de conteúdos.
+- **FR-015**: O sistema MUST manter histórico de comentários, mudanças de status e alterações de documentos/links com usuário, data/hora, tipo e resumo da alteração.
+- **FR-016**: O sistema MUST usar uma interface limpa, visualmente organizada e aderente ao Design System GOV.BR, priorizando componentes, fundamentos visuais, tokens oficiais, acessibilidade e consistência de interação.
+- **FR-017**: O MVP MUST funcionar como web responsivo em desktop, tablet e navegador mobile, preservando a lógica de navegação e a organização de conteúdos.
 
 ### Non-Functional Requirements
 
 - **NFR-001**: O sistema MUST adotar os padrões de interface do Design System GOV.BR (DSGOV), conforme a documentação oficial em https://www.gov.br/ds/home, incluindo padrões de design, fundamentos visuais, utilitários CSS e fluxo de desenvolvimento.
 - **NFR-002**: O sistema MUST priorizar componentes e tokens oficiais do DSGOV para manter consistência visual, acessibilidade, previsibilidade de interação e aderência ao Padrão Digital de Governo nas experiências web e mobile.
+- **NFR-003**: O sistema MUST atender requisitos de acessibilidade aplicáveis, incluindo operação por teclado, foco visível, nomes acessíveis em controles interativos, progresso anunciado para tecnologias assistivas, status comunicados por texto e visual, e contraste compatível com WCAG AA/eMAG quando aplicável.
+- **NFR-004**: O MVP MUST exibir estado offline quando perder conectividade, avisar falhas de sincronização em tempo real e preservar dados já salvos no servidor.
 
 ### Key Entities
 
 - **Usuário**: Representa qualquer pessoa que acessa o sistema, com nome, papel, áreas associadas e autenticação.
 - **Papel**: Define o nível de acesso e a visão relevante para o usuário, como diretor, assistente de direção, fotografia, arte, produção e outros.
 - **Área**: Representa um departamento ou especialidade dentro da produção, como cinematografia, arte, produção, sonorização e direção.
-- **Objetivo**: Representa uma tarefa, etapa ou entrega de uma área ou de múltiplas áreas, com status, contexto, documentação e responsável.
+- **Objetivo**: Representa uma tarefa simples associada a uma área principal, com status, contexto, documentação, responsável, compartilhamentos explícitos, comentários e histórico.
 - **Checklist**: Estrutura central de acompanhamento da área, composta por objetivos e indicadores de progresso.
 - **Documento**: Recurso de apoio vinculado ao objetivo, podendo ser link, arquivo, moodboard, planilha, mapa ou pesquisa.
 - **Comentário**: Registro de conversa, sugestão ou decisão dentro do contexto de um objetivo.
+- **Histórico**: Registro auditável de comentários adicionados, mudanças de status e alterações de documentos/links, contendo usuário, data/hora, tipo e resumo da alteração.
 
 ## Success Criteria
 
@@ -161,5 +164,5 @@ Como membro da equipe, quero anexar links e documentos de referência ao objetiv
 - Os usuários têm acesso estável à internet e utilizam device com suporte mínimo para web e mobile.
 - A produção audiovisual pode ter múltiplos papéis e áreas simultâneas, mas todas devem respeitar o mesmo modelo de checklist e contexto.
 - O fluxo de produção pode variar por projeto, porém a operação central do app permanece consistente e compartilhada.
-- O sistema será construído como uma solução moderna de web e mobile com base em React e React Native, conforme a arquitetura definida pela constituição.
-- A autenticação por SSO será a base de acesso, com políticas de permissão apropriadas para cada papel.
+- O MVP será construído como web responsivo com React; app mobile nativo com React Native fica como evolução futura.
+- A autenticação por Google SSO será a base de acesso do MVP, com políticas de permissão apropriadas para cada papel.
